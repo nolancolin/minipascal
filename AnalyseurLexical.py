@@ -21,7 +21,7 @@ def lire_car():
     if carlu=='':
         carlu=None
     elif carlu=='\n':
-            num_ligne+=1
+        num_ligne+=1
 
 
 def initialiser(nom_fichier):
