@@ -122,3 +122,40 @@ def sauter_separateurs():
             continue
 
         break
+
+
+def analex():
+    global token , carlu 
+    sauter_separateurs()
+    if carlu == None:
+        token="EOF"
+        return 
+    if carlu in numbers :
+        token=reco_entier()
+        return
+    if carlu in letters :
+        token=reco_ident_ou_mot_reserve()
+        return 
+    if carlu == '"' :
+        token=reco_chaine()
+        return
+    # gérer les autres cas (opérateurs, ponctuation, etc.)
+    else : 
+        token=carlu
+        avancer()
+        return  
+
+
+
+initialiser("Code.minipascal")
+
+while True:
+    analex()
+    print(token)
+    if token == "EOF":
+        break
+
+fermer()
+
+
+
