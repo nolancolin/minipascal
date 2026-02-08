@@ -1,3 +1,7 @@
+# ===== IMPORT =====
+
+import TableSymboles
+
 # ===== CONSTANTES =====
 
 LONG_MAX_CHAINE = 50
@@ -190,11 +194,13 @@ initialiser("Code.minipascal")
 
 while True:
     analex()
+    if token == "id":
+        TableSymboles.add_id(chaine)
     print(token)
     if token == "EOF":
         break
 
+TableSymboles.print_ids()
 fermer()
-
 
 
