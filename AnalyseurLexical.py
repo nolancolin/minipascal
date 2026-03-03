@@ -17,9 +17,10 @@ nombre = None        # entier reconnu
 chaine = ""          # chaîne reconnue
 token = None         # unité lexicale courante
 
-letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+KEYWORDS = {"PROGRAMME", "CONST", "FIN", "DEBUT", "VAR"}
 numbers = "0123456789"
-symboles = ";:=+-*/()<>."
+SYMBOLES = {";",".","=","+","-","*","/","(",")","<",">",":",","}
+SYMB_TOKENS = {"ptvrig", "pt", "eg", "plus", "moins", "mult", "divi", "parouv", "parfer", "inf", "diff", "infeg", "sup", "supeg", "aff", "twopts", "virg"}
 
 
 def erreur(num_erreur: int) -> None:
@@ -29,11 +30,13 @@ def erreur(num_erreur: int) -> None:
     return 
 
 def reco_symb() -> str:
-    global carlu
+    global carlu, chaine
     
     ligne_actuelle = num_ligne
     type = "null"
+    chaine = carlu
     match carlu: 
+        case ",": type = "virg"
         case ";": type = "ptvrig"
         case ".": type = "pt"
         case "=": type = "eg"
@@ -46,20 +49,22 @@ def reco_symb() -> str:
         case "<":
             avancer()
             if ligne_actuelle < num_ligne: type = "inf"
-            match carlu:
-                case "=": type = "infeg"
-                case ">": type = ""
+            else:
+                chaine += carlu
+                match carlu:
+                    case "=": type = "infeg"
+                    case ">": type = "diff"
         case ">":
             avancer()
+            chaine += carlu
             type = "supeg" if ligne_actuelle == num_ligne and carlu == "=" else "sup"
         case ":":
             avancer()
+            chaine += carlu
             type = "aff" if ligne_actuelle == num_ligne and carlu == "=" else "twopts"
     avancer()
     return type
-    
-        
-    
+
 
 def reco_entier() -> str:
     global nombre, carlu
@@ -79,15 +84,25 @@ def reco_chaine() -> str:
     chaine = ""
     taille = 0
 
-    avancer()  # sauter le "
-
-    while carlu and carlu != '"':
-        chaine += carlu
-        taille += 1
-        if taille > LONG_MAX_CHAINE:
-            erreur(2)
-            return
-        avancer()
+    if carlu == '"':
+        avancer() # sauter le "
+        while carlu and carlu != '"':
+            chaine += carlu
+            taille += 1
+            if taille > LONG_MAX_CHAINE:
+                erreur(2)
+                return
+            avancer()
+    
+    else:
+        avancer() # sauter le '
+        while carlu and carlu != "'":
+            chaine += carlu
+            taille += 1
+            if taille > LONG_MAX_CHAINE:
+                erreur(2)
+                return
+            avancer()
 
     avancer()  # sauter le "
 
@@ -98,11 +113,11 @@ def reco_ident_ou_mot_reserve() -> str:
     global chaine, carlu
     chaine = ""
 
-    while carlu and (carlu in letters or carlu in numbers or carlu == '_'):
+    while carlu and (carlu.isalpha() or carlu in numbers or carlu == '_'):
         chaine += carlu
         avancer()
 
-    return "id"
+    return "id" if chaine not in KEYWORDS else "mot_res"
 
 
 def lire_car() -> None:
@@ -173,17 +188,17 @@ def analex() -> None:
     if carlu in numbers:
         token=reco_entier()
         return
-    if carlu in letters:
+    if carlu.isalpha():
         token=reco_ident_ou_mot_reserve()
         return 
-    if carlu == '"':
+    if carlu == '"' or carlu == "'":
         token=reco_chaine()
         return
-    if carlu in symboles:
+    if carlu in SYMBOLES:
         token=reco_symb()
         return
     # gérer les autres cas (opérateurs, ponctuation, etc.)
-    else : 
+    else: 
         token=carlu
         avancer()
         return  
@@ -194,11 +209,12 @@ initialiser("Code.minipascal")
 
 while True:
     analex()
-    if token == "id":
-        TableSymboles.add_id(chaine)
-    print(token)
-    if token == "EOF":
-        break
+    if token == "EOF": break
+    if token == "ent": print(str(nombre)+" : "+token)
+    else:
+        if token == "id":
+            TableSymboles.add_id(chaine)
+        print(chaine+" : "+token)
 
 TableSymboles.print_ids()
 fermer()
