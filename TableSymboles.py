@@ -1,20 +1,39 @@
-# ===== VARIABLES GLOBALES =====
+# ===== IMPORT =====
+
+import AnalyseurLexical
+
+# ===== CONSTANTES =====
+
+NB_ID_MAX = 100
+
+TYPE_ENT = 0
+TYPE_CH = 1
+
+NATURE_PROG = 0
+NATURE_CONST = 1
+NATURE_VAR = 2
+
+NB_CONST_CHAINE = 0
+
+# ===== VARIABLES GLOBALES =====4
+
+CURRENT_NATURE = None
 
 ids={}
 
+VAL_CONST_CHAINE = []
 
 
-def search_id(nom):
-    return nom in ids 
+def search_id(nom) -> bool:
+    return nom in ids
 
-def add_id(nom):
-    if not search_id(nom):
-        ids[nom] = {}
+def add_id(nom) -> bool:
+    if search_id(nom): return AnalyseurLexical.erreur(5)
+    if len(ids) == NB_ID_MAX: return AnalyseurLexical.erreur(8)
+    ids[nom] = {"nature" : None, "type": None, "valeur": None}
+    return True
 
 def print_ids():
-    print("Ids : ",end="")
-    idsList = list(ids.keys())
-    print(idsList[0],end="")
-    for i in range(1,len(idsList)):
-        print(", "+idsList[i],end="")
-    print(".")
+    print("Table d'identificateurs :")
+    for id in ids:
+        print(f"{id} -> {ids[id]}")

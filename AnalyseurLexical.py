@@ -1,6 +1,7 @@
 # ===== IMPORT =====
 
 import TableSymboles
+import AnalyseurSyntaxique
 
 # ===== CONSTANTES =====
 
@@ -17,17 +18,22 @@ nombre = None        # entier reconnu
 chaine = ""          # chaîne reconnue
 token = None         # unité lexicale courante
 
-KEYWORDS = {"PROGRAMME", "CONST", "FIN", "DEBUT", "VAR"}
-numbers = "0123456789"
+KEYWORDS = ["CONST", "DEBUT", "ECRIRE", "FIN", "LIRE", "PROGRAMME", "VAR"]
 SYMBOLES = {";",".","=","+","-","*","/","(",")","<",">",":",","}
 SYMB_TOKENS = {"ptvrig", "pt", "eg", "plus", "moins", "mult", "divi", "parouv", "parfer", "inf", "diff", "infeg", "sup", "supeg", "aff", "twopts", "virg"}
 
 
-def erreur(num_erreur: int) -> None:
+def erreur(num_erreur: int) -> bool:
     match num_erreur:
         case 1: print(f"Nombre trop grand à la ligne {num_ligne} !")
         case 2: print(f"Chaîne de caractère trop grande à la ligne {num_ligne} !")
-    return 
+        case 3: print(f"Erreur syntaxique.")
+        case 4: print(f"Erreur pas encore faite mais t'as fait de la merde.")
+        case 5: print(f"L'identificateur est déjà existant.")
+        case 6: print(f"L'identificateur n'existe pas.")
+        case 7: print(f"Cet objet est une constante, et non une variable.")
+        case 8: print(f"Le nombre d'identificateurs a atteint le maximum.")
+    return False
 
 def reco_symb() -> str:
     global carlu, chaine
@@ -70,7 +76,7 @@ def reco_entier() -> str:
     global nombre, carlu
     nombre = 0
 
-    while carlu in numbers:
+    while carlu.isnumeric():
         nombre = nombre * 10 + int(carlu)
         if nombre > MAX_INTEGER:
             erreur(1)
@@ -113,7 +119,7 @@ def reco_ident_ou_mot_reserve() -> str:
     global chaine, carlu
     chaine = ""
 
-    while carlu and (carlu.isalpha() or carlu in numbers or carlu == '_'):
+    while carlu and (carlu.isalpha() or carlu.isnumeric() or carlu == '_'):
         chaine += carlu
         avancer()
 
@@ -185,7 +191,7 @@ def analex() -> None:
     if not carlu:
         token="EOF"
         return 
-    if carlu in numbers:
+    if carlu.isnumeric():
         token=reco_entier()
         return
     if carlu.isalpha():
@@ -201,22 +207,14 @@ def analex() -> None:
     else: 
         token=carlu
         avancer()
-        return  
+        return
 
-
-
-initialiser("Code.minipascal")
-
-while True:
-    analex()
-    if token == "EOF": break
-    if token == "ent": print(str(nombre)+" : "+token)
-    else:
-        if token == "id":
-            TableSymboles.add_id(chaine)
-        print(chaine+" : "+token)
-
-TableSymboles.print_ids()
-fermer()
-
-
+def mainLexical():
+    initialiser("Code.minipascal")
+    while True:
+        analex()
+        if token == "EOF": break
+        if token == "ent": print(str(nombre)+" : "+token)
+        else: print(chaine+" : "+token)
+    TableSymboles.print_ids()
+    fermer()
