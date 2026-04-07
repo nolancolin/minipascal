@@ -1,8 +1,3 @@
-# ===== IMPORT =====
-
-import TableSymboles
-import AnalyseurSyntaxique
-
 # ===== CONSTANTES =====
 
 LONG_MAX_CHAINE = 50
@@ -18,21 +13,22 @@ nombre = None        # entier reconnu
 chaine = ""          # chaîne reconnue
 token = None         # unité lexicale courante
 
-KEYWORDS = ["CONST", "DEBUT", "ECRIRE", "FIN", "LIRE", "PROGRAMME", "VAR"]
+KEYWORDS = ["CONST", "DEBUT", "ECRIRE", "FIN", "LIRE", "PROGRAMME", "VAR", "SI", "ALORS", "SINON", "TANTQUE", "FAIRE"]
 SYMBOLES = {";",".","=","+","-","*","/","(",")","<",">",":",","}
-SYMB_TOKENS = {"ptvrig", "pt", "eg", "plus", "moins", "mult", "divi", "parouv", "parfer", "inf", "diff", "infeg", "sup", "supeg", "aff", "twopts", "virg"}
+SYMB_TOKENS = {"ptvirg", "pt", "eg", "plus", "moins", "mult", "divi", "parouv", "parfer", "inf", "diff", "infeg", "sup", "supeg", "aff", "twopts", "virg"}
 
 
 def erreur(num_erreur: int) -> bool:
     match num_erreur:
         case 1: print(f"Nombre trop grand à la ligne {num_ligne} !")
         case 2: print(f"Chaîne de caractère trop grande à la ligne {num_ligne} !")
-        case 3: print(f"Erreur syntaxique.")
-        case 4: print(f"Erreur pas encore faite mais t'as fait de la merde.")
+        case 3: print(f"Erreur syntaxique à la ligne {num_ligne}.")
+        case 4: print(f"Erreur division par zéro.")
         case 5: print(f"L'identificateur est déjà existant.")
         case 6: print(f"L'identificateur n'existe pas.")
         case 7: print(f"Cet objet est une constante, et non une variable.")
         case 8: print(f"Le nombre d'identificateurs a atteint le maximum.")
+        case 9: print(f"Votre entrée doit être un nombre.")
     return False
 
 def reco_symb() -> str:
@@ -43,7 +39,7 @@ def reco_symb() -> str:
     chaine = carlu
     match carlu: 
         case ",": type = "virg"
-        case ";": type = "ptvrig"
+        case ";": type = "ptvirg"
         case ".": type = "pt"
         case "=": type = "eg"
         case "+": type = "plus"
@@ -150,7 +146,6 @@ def initialiser(nom_fichier) -> None:
 def avancer() -> None:
     lire_car()
 
-
 def fermer() -> None:
     global source
     if source:
@@ -208,13 +203,4 @@ def analex() -> None:
         token=carlu
         avancer()
         return
-
-def mainLexical():
-    initialiser("Code.minipascal")
-    while True:
-        analex()
-        if token == "EOF": break
-        if token == "ent": print(str(nombre)+" : "+token)
-        else: print(chaine+" : "+token)
-    TableSymboles.print_ids()
-    fermer()
+    
