@@ -2,7 +2,7 @@
 PROGRAMME premiers;
 VAR n, i, d, premier;
 DEBUT
-  ECRIRE("Premiers jusqu'a : ");
+  ECRIRE("Premiers jusqu'à : ");
   LIRE(n);
   POUR i := 2 JUSQUA n FAIRE
   DEBUT

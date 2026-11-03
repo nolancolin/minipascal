@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="820" height="574" viewBox="0 0 820 574" role="img" aria-label="Démo de MiniPascal dans un terminal">
+<rect x="0.5" y="0.5" width="819" height="573" rx="10" fill="#0d1117" stroke="#30363d"/>
+<path d="M0.5 38 H819.5" stroke="#30363d"/>
+<circle cx="22" cy="19" r="6" fill="#ff5f56"/><circle cx="42" cy="19" r="6" fill="#ffbd2e"/><circle cx="62" cy="19" r="6" fill="#27c93f"/>
+<text x="410" y="24" text-anchor="middle" fill="#8b949e" font-size="13" font-family="ui-sans-serif, -apple-system, Segoe UI, sans-serif">minipascal</text>
+<g font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="14" style="white-space:pre">
+<text x="22" y="66" xml:space="preserve"><tspan fill="#7ee787" font-weight="bold">$</tspan><tspan fill="#c9d1d9"> minipascal exemples/premiers.minipascal</tspan></text>
+<text x="22" y="87" xml:space="preserve"><tspan fill="#c9d1d9">Premiers jusqu&#x27;à : </tspan><tspan fill="#c9d1d9" font-weight="bold">50</tspan></text>
+<text x="22" y="108" xml:space="preserve"><tspan fill="#c9d1d9">2 3 5 7 11 13 17 19 23 29 31 37 41 43 47 </tspan></text>
+<text x="22" y="129" xml:space="preserve"></text>
+<text x="22" y="150" xml:space="preserve"><tspan fill="#7ee787" font-weight="bold">$</tspan><tspan fill="#c9d1d9"> minipascal exemples/expression.minipascal --trace</tspan></text>
+<text x="22" y="171" xml:space="preserve"><tspan fill="#8b949e">0000</tspan><tspan fill="#c9d1d9">  </tspan><tspan fill="#39c5cf">EMPI 0        </tspan><tspan fill="#c9d1d9"> pile : []</tspan></text>
+<text x="22" y="192" xml:space="preserve"><tspan fill="#8b949e">0001</tspan><tspan fill="#c9d1d9">  </tspan><tspan fill="#39c5cf">EMPI 2        </tspan><tspan fill="#c9d1d9"> pile : [0]</tspan></text>
+<text x="22" y="213" xml:space="preserve"><tspan fill="#8b949e">0002</tspan><tspan fill="#c9d1d9">  </tspan><tspan fill="#39c5cf">EMPI 3        </tspan><tspan fill="#c9d1d9"> pile : [0, 2]</tspan></text>
+<text x="22" y="234" xml:space="preserve"><tspan fill="#8b949e">0003</tspan><tspan fill="#c9d1d9">  </tspan><tspan fill="#39c5cf">EMPI 4        </tspan><tspan fill="#c9d1d9"> pile : [0, 2, 3]</tspan></text>
+<text x="22" y="255" xml:space="preserve"><tspan fill="#8b949e">0004</tspan><tspan fill="#c9d1d9">  </tspan><tspan fill="#39c5cf">MULT          </tspan><tspan fill="#c9d1d9"> pile : [0, 2, 3, 4]</tspan></text>
+<text x="22" y="276" xml:space="preserve"><tspan fill="#8b949e">0005</tspan><tspan fill="#c9d1d9">  </tspan><tspan fill="#39c5cf">ADDI          </tspan><tspan fill="#c9d1d9"> pile : [0, 2, 12]</tspan></text>
+<text x="22" y="297" xml:space="preserve"><tspan fill="#8b949e">0006</tspan><tspan fill="#c9d1d9">  </tspan><tspan fill="#39c5cf">AFFE          </tspan><tspan fill="#c9d1d9"> pile : [0, 14]</tspan></text>
+<text x="22" y="318" xml:space="preserve"><tspan fill="#8b949e">0007</tspan><tspan fill="#c9d1d9">  </tspan><tspan fill="#39c5cf">EMPI 0        </tspan><tspan fill="#c9d1d9"> pile : []</tspan></text>
+<text x="22" y="339" xml:space="preserve"><tspan fill="#8b949e">0008</tspan><tspan fill="#c9d1d9">  </tspan><tspan fill="#39c5cf">CONT          </tspan><tspan fill="#c9d1d9"> pile : [0]</tspan></text>
+<text x="22" y="360" xml:space="preserve"><tspan fill="#8b949e">0009</tspan><tspan fill="#c9d1d9">  </tspan><tspan fill="#39c5cf">ECRE          </tspan><tspan fill="#c9d1d9"> pile : [14]</tspan></text>
+<text x="22" y="381" xml:space="preserve"><tspan fill="#c9d1d9">      </tspan><tspan fill="#c9d1d9" font-weight="bold">&gt;&gt; &#x27;14&#x27;</tspan></text>
+<text x="22" y="402" xml:space="preserve"><tspan fill="#8b949e">0010</tspan><tspan fill="#c9d1d9">  </tspan><tspan fill="#39c5cf">STOP          </tspan><tspan fill="#c9d1d9"> pile : []</tspan></text>
+<text x="22" y="423" xml:space="preserve"></text>
+<text x="22" y="444" xml:space="preserve"><tspan fill="#7ee787" font-weight="bold">$</tspan><tspan fill="#c9d1d9"> minipascal exemples/erreurs/point_virgule_manquant.minipascal</tspan></text>
+<text x="22" y="465" xml:space="preserve"><tspan fill="#ff7b72" font-weight="bold">erreur syntaxique</tspan><tspan fill="#c9d1d9" font-weight="bold"> : attendu &#x27;;&#x27; ou &#x27;FIN&#x27;, trouvé &#x27;ECRIRE&#x27;</tspan></text>
+<text x="22" y="486" xml:space="preserve"><tspan fill="#c9d1d9"> </tspan><tspan fill="#79c0ff" font-weight="bold">--&gt;</tspan><tspan fill="#c9d1d9"> exemples/erreurs/point_virgule_manquant.minipascal:5:3</tspan></text>
+<text x="22" y="507" xml:space="preserve"><tspan fill="#c9d1d9">  </tspan><tspan fill="#79c0ff" font-weight="bold">|</tspan></text>
+<text x="22" y="528" xml:space="preserve"><tspan fill="#79c0ff" font-weight="bold">5 |</tspan><tspan fill="#c9d1d9">   ECRIRE(x)</tspan></text>
+<text x="22" y="549" xml:space="preserve"><tspan fill="#c9d1d9">  </tspan><tspan fill="#79c0ff" font-weight="bold">|</tspan><tspan fill="#c9d1d9">   </tspan><tspan fill="#ff7b72" font-weight="bold">^^^^^^</tspan></text>
+</g>
+</svg>

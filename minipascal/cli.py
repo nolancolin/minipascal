@@ -63,7 +63,7 @@ def afficher_tokens(source: str) -> None:
 
 
 def afficher_trace(co, instr, pilex) -> None:
-    print(f"{c(GRIS, f'{co:04d}')}  {c(CYAN, f'{instr!s:<22}')} pile : {pilex}", file=sys.stderr)
+    print(f"{c(GRIS, f'{co:04d}')}  {c(CYAN, f'{instr!s:<14}')} pile : {pilex}", file=sys.stderr)
 
 
 def sortie_trace(texte: str) -> None:

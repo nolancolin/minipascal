@@ -1,0 +1,7 @@
+{ Le plus petit exemple pour suivre la pile avec --trace }
+PROGRAMME expression;
+VAR x;
+DEBUT
+  x := 2 + 3 * 4;
+  ECRIRE(x)
+FIN.
