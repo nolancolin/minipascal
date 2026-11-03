@@ -6,7 +6,7 @@
 
 Analyse lexicale · analyse syntaxique · table des symboles · génération de P-code · machine virtuelle
 
-[![tests](https://github.com/nolancolin/Compilation/actions/workflows/tests.yml/badge.svg)](https://github.com/nolancolin/Compilation/actions/workflows/tests.yml)
+[![tests](https://github.com/nolancolin/minipascal/actions/workflows/tests.yml/badge.svg)](https://github.com/nolancolin/minipascal/actions/workflows/tests.yml)
 ![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-3776AB?logo=python&logoColor=white)
 ![Dépendances : aucune](https://img.shields.io/badge/d%C3%A9pendances-aucune-2ea44f)
 
@@ -43,8 +43,8 @@ Ce qui nous paraît le plus intéressant :
 Il suffit de Python 3.10 ou plus, sans rien installer :
 
 ```bash
-git clone https://github.com/nolancolin/Compilation.git
-cd Compilation
+git clone https://github.com/nolancolin/minipascal.git
+cd minipascal
 python Main.py exemples/premiers.minipascal
 ```
 
@@ -348,4 +348,4 @@ rechargeable, la trace, et les tests. Les noms du TP (`analex`, `reco_entier`, `
 
 ## Auteurs
 
-Projet réalisé par **Nolan** et **Loghan**, L3 Informatique, 2026.
+Projet réalisé par [Nolan](https://github.com/nolancolin) et [Loghan](https://github.com/MegaVolvirine), L3 Informatique, 2026.
