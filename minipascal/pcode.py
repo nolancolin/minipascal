@@ -1,9 +1,6 @@
-"""Définition du P-code (langage de la machine à pile) et de son format texte ``.cod``.
+"""Le P-code : jeu d'instructions de la machine à pile et format texte .cod.
 
-Une instruction est un couple (opération, argument optionnel) ; les adresses de
-saut sont des indices dans la liste d'instructions.
-
-Format ``.cod`` (lisible et rechargeable) :
+Exemple de fichier .cod :
 
     ; MiniPascal P-code
     MOTS 2
@@ -11,42 +8,22 @@ Format ``.cod`` (lisible et rechargeable) :
     MOT 1 x
     CODE
     0000 EMPI 1      ; l.5
+    0001 EMPI 0      ; l.5
     ...
 """
-
-from __future__ import annotations
 
 import json
 import re
 from dataclasses import dataclass, field
 
-# opération -> (nombre d'opérandes, description)
-OPERATIONS: dict[str, tuple[int, str]] = {
-    "ADDI": (0, "dépile b, a ; empile a + b"),
-    "SOUS": (0, "dépile b, a ; empile a - b"),
-    "MULT": (0, "dépile b, a ; empile a * b"),
-    "DIVI": (0, "dépile b, a ; empile a / b (division entière)"),
-    "MODU": (0, "dépile b, a ; empile a MOD b"),
-    "MOIN": (0, "dépile a ; empile -a"),
-    "EGAL": (0, "dépile b, a ; empile 1 si a = b sinon 0"),
-    "DIFF": (0, "dépile b, a ; empile 1 si a <> b sinon 0"),
-    "INF":  (0, "dépile b, a ; empile 1 si a < b sinon 0"),
-    "INFE": (0, "dépile b, a ; empile 1 si a <= b sinon 0"),
-    "SUP":  (0, "dépile b, a ; empile 1 si a > b sinon 0"),
-    "SUPE": (0, "dépile b, a ; empile 1 si a >= b sinon 0"),
-    "ET":   (0, "dépile b, a ; empile 1 si a et b sont non nuls"),
-    "OU":   (0, "dépile b, a ; empile 1 si a ou b est non nul"),
-    "NON":  (0, "dépile a ; empile 1 si a = 0 sinon 0"),
-    "EMPI": (1, "empile l'opérande (constante ou adresse)"),
-    "CONT": (0, "dépile une adresse ; empile le contenu du mot mémoire"),
-    "AFFE": (0, "dépile valeur puis adresse ; range la valeur à l'adresse"),
-    "LIRE": (0, "dépile une adresse ; y range un entier lu au clavier"),
-    "ECRE": (0, "dépile et écrit un entier"),
-    "ECRC": (1, "écrit la chaîne donnée en opérande"),
-    "ECRL": (0, "écrit un saut de ligne"),
-    "ALLE": (1, "aller à l'adresse donnée"),
-    "ALSN": (1, "dépile ; si 0 (faux), aller à l'adresse donnée"),
-    "STOP": (0, "arrête la machine"),
+# nom -> nombre d'opérandes
+OPERATIONS = {
+    "ADDI": 0, "SOUS": 0, "MULT": 0, "DIVI": 0, "MODU": 0, "MOIN": 0,
+    "EGAL": 0, "DIFF": 0, "INF": 0, "INFE": 0, "SUP": 0, "SUPE": 0,
+    "ET": 0, "OU": 0, "NON": 0,
+    "EMPI": 1, "CONT": 0, "AFFE": 0, "LIRE": 0,
+    "ECRE": 0, "ECRC": 1, "ECRL": 0,
+    "ALLE": 1, "ALSN": 1, "STOP": 0,
 }
 
 
@@ -54,7 +31,7 @@ OPERATIONS: dict[str, tuple[int, str]] = {
 class Instruction:
     op: str
     arg: int | str | None = None
-    ligne: int = 0                 # ligne du source (pour les erreurs d'exécution)
+    ligne: int = 0     # ligne du source, pour situer les erreurs d'exécution
 
     def __str__(self) -> str:
         if self.arg is None:
@@ -66,76 +43,65 @@ class Instruction:
 
 @dataclass
 class Programme:
-    """Résultat de la compilation : code, et description de la mémoire."""
-
-    instructions: list[Instruction] = field(default_factory=list)
+    p_code: list[Instruction] = field(default_factory=list)
     noms_memoire: list[str] = field(default_factory=list)
-    initiales: list[int | None] = field(default_factory=list)
-
-    def listing(self) -> str:
-        return ecrire_cod(self)
+    valeurs_initiales: list[int | None] = field(default_factory=list)
 
 
-def ecrire_cod(programme: Programme) -> str:
-    lignes = ["; MiniPascal P-code", f"MOTS {len(programme.noms_memoire)}"]
-    for adr, (nom, init) in enumerate(zip(programme.noms_memoire, programme.initiales)):
-        valeur = f" = {init}" if init is not None else ""
-        lignes.append(f"MOT {adr} {nom}{valeur}")
+def ecrire_cod(prog: Programme) -> str:
+    lignes = ["; MiniPascal P-code", f"MOTS {len(prog.noms_memoire)}"]
+    for adr, (nom, val) in enumerate(zip(prog.noms_memoire, prog.valeurs_initiales)):
+        lignes.append(f"MOT {adr} {nom}" + (f" = {val}" if val is not None else ""))
     lignes.append("CODE")
-    for i, instr in enumerate(programme.instructions):
-        commentaire = f"      ; l.{instr.ligne}" if instr.ligne else ""
-        lignes.append(f"{i:04d} {instr}{commentaire}")
+    for i, instr in enumerate(prog.p_code):
+        ligne = f"{i:04d} {instr}"
+        if instr.ligne:
+            ligne = f"{ligne:<24} ; l.{instr.ligne}"
+        lignes.append(ligne)
     return "\n".join(lignes) + "\n"
 
 
-_RE_MOT = re.compile(r"^MOT\s+(\d+)\s+(\S+?)(?:\s*=\s*(-?\d+))?\s*$")
-_RE_LIGNE = re.compile(r"l\.(\d+)")
+RE_MOT = re.compile(r"MOT\s+(\d+)\s+(\S+?)(?:\s*=\s*(-?\d+))?")
+RE_NUM_LIGNE = re.compile(r";\s*l\.(\d+)")
 
 
 def lire_cod(texte: str) -> Programme:
-    """Recharge un programme écrit par :func:`ecrire_cod`."""
-    programme = Programme()
+    prog = Programme()
     dans_code = False
-    for numero, brut in enumerate(texte.splitlines(), start=1):
-        ligne = brut.strip()
-        if not ligne or ligne.startswith(";"):
+    for num, ligne in enumerate(texte.splitlines(), start=1):
+        ligne = ligne.strip()
+        if not ligne or ligne.startswith(";") or ligne.startswith("MOTS"):
             continue
         if not dans_code:
             if ligne == "CODE":
                 dans_code = True
-            elif ligne.startswith("MOTS"):
-                continue
-            elif m := _RE_MOT.match(ligne):
-                if int(m.group(1)) != len(programme.noms_memoire):
-                    raise ValueError(f"ligne {numero}: adresse mémoire inattendue")
-                programme.noms_memoire.append(m.group(2))
-                programme.initiales.append(int(m.group(3)) if m.group(3) is not None else None)
+            elif (m := RE_MOT.fullmatch(ligne)) and int(m.group(1)) == len(prog.noms_memoire):
+                prog.noms_memoire.append(m.group(2))
+                prog.valeurs_initiales.append(int(m.group(3)) if m.group(3) else None)
             else:
-                raise ValueError(f"ligne {numero}: ligne non reconnue : {ligne!r}")
+                raise ValueError(f"ligne {num} : déclaration mémoire invalide : {ligne!r}")
             continue
 
         morceaux = ligne.split(None, 2)
-        if len(morceaux) < 2:
-            raise ValueError(f"ligne {numero}: instruction invalide : {ligne!r}")
-        op = morceaux[1]
+        op = morceaux[1] if len(morceaux) > 1 else ""
         if op not in OPERATIONS:
-            raise ValueError(f"ligne {numero}: opération inconnue : {op}")
+            raise ValueError(f"ligne {num} : instruction inconnue : {ligne!r}")
         reste = morceaux[2] if len(morceaux) > 2 else ""
-        arg: int | str | None = None
-        queue = reste
-        if OPERATIONS[op][0] == 1:
-            if op == "ECRC":
-                arg, fin = json.JSONDecoder().raw_decode(reste)
-                queue = reste[fin:]
-            else:
-                partie = reste.split(";", 1)[0].strip()
-                try:
-                    arg = int(partie)
-                except ValueError:
-                    raise ValueError(f"ligne {numero}: opérande entier attendu pour {op}") from None
-                queue = reste[len(partie):]
-        m = _RE_LIGNE.search(queue)
-        programme.instructions.append(Instruction(op, arg, int(m.group(1)) if m else 0))
+        arg = None
+        if OPERATIONS[op] == 1:
+            try:
+                if op == "ECRC":
+                    arg, fin = json.JSONDecoder().raw_decode(reste)
+                    if not isinstance(arg, str):
+                        raise ValueError
+                else:
+                    arg = int(reste.split(";")[0])
+                    fin = len(reste.split(";")[0])
+            except ValueError:
+                raise ValueError(f"ligne {num} : opérande invalide pour {op}") from None
+            reste = reste[fin:]
+        m = RE_NUM_LIGNE.search(reste)
+        prog.p_code.append(Instruction(op, arg, int(m.group(1)) if m else 0))
     if not dans_code:
         raise ValueError("section CODE absente")
-    return programme
+    return prog

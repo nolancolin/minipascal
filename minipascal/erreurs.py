@@ -1,62 +1,32 @@
-"""Exceptions du compilateur et de la machine virtuelle.
-
-Toutes les erreurs de compilation portent la position (ligne, colonne) du
-problème pour pouvoir afficher la ligne fautive avec un pointeur ``^``.
-"""
-
-from __future__ import annotations
+"""Erreurs du compilateur et de la machine virtuelle, avec leur position dans le source."""
 
 
-class ErreurCompilation(Exception):
-    """Erreur détectée avant l'exécution (lexicale, syntaxique, sémantique)."""
+class ErreurMiniPascal(Exception):
+    nom = "erreur"
 
-    categorie = "Erreur"
-
-    def __init__(self, message: str, ligne: int = 0, colonne: int = 0) -> None:
+    def __init__(self, message: str, ligne: int = 0, colonne: int = 0, longueur: int = 1) -> None:
         super().__init__(message)
         self.message = message
         self.ligne = ligne
         self.colonne = colonne
+        self.longueur = max(1, longueur)   # nombre de ^ sous la partie fautive
 
-    def formater(self, source: str | None = None, nom_fichier: str | None = None) -> str:
-        lieu = nom_fichier or "<source>"
-        if self.ligne:
-            lieu += f":{self.ligne}"
-            if self.colonne:
-                lieu += f":{self.colonne}"
-        texte = f"{lieu}: {self.categorie} : {self.message}"
-        if source is not None and self.ligne:
-            lignes = source.splitlines()
-            if 1 <= self.ligne <= len(lignes):
-                fautive = lignes[self.ligne - 1]
-                texte += f"\n  {fautive}"
-                if self.colonne:
-                    texte += f"\n  {' ' * (self.colonne - 1)}^"
-        return texte
+
+class ErreurCompilation(ErreurMiniPascal):
+    pass
 
 
 class ErreurLexicale(ErreurCompilation):
-    categorie = "Erreur lexicale"
+    nom = "erreur lexicale"
 
 
 class ErreurSyntaxique(ErreurCompilation):
-    categorie = "Erreur syntaxique"
+    nom = "erreur syntaxique"
 
 
 class ErreurSemantique(ErreurCompilation):
-    categorie = "Erreur sémantique"
+    nom = "erreur sémantique"
 
 
-class ErreurExecution(Exception):
-    """Erreur levée par la machine virtuelle (division par zéro, etc.)."""
-
-    def __init__(self, message: str, ligne: int = 0) -> None:
-        super().__init__(message)
-        self.message = message
-        self.ligne = ligne
-
-    def formater(self, nom_fichier: str | None = None) -> str:
-        lieu = nom_fichier or "<programme>"
-        if self.ligne:
-            lieu += f":{self.ligne}"
-        return f"{lieu}: Erreur d'exécution : {self.message}"
+class ErreurExecution(ErreurMiniPascal):
+    nom = "erreur d'exécution"

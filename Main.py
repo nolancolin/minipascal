@@ -1,4 +1,4 @@
-"""Raccourci : ``python Main.py [programme.minipascal]`` (équivaut à ``python -m minipascal``)."""
+"""Point d'entrée sans installation : python Main.py programme.minipascal [options]"""
 
 import sys
 

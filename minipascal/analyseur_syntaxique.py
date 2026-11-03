@@ -1,130 +1,99 @@
-"""Analyseur syntaxique (descente récursive) et générateur de P-code.
+"""Analyseur syntaxique par descente récursive, qui génère le P-code au fur et à mesure.
 
-Grammaire (voir aussi le README) :
-
-    programme   = "PROGRAMME" id ";" [decl_const] [decl_var] bloc "."
-    decl_const  = "CONST" id "=" (nombre | chaine) { "," id "=" (nombre | chaine) } ";"
-    decl_var    = "VAR" id { "," id } ";"
-    bloc        = "DEBUT" liste "FIN"
-    liste       = instruction { ";" instruction }
-    instruction = [ affectation | lecture | ecriture | bloc | si | tantque
-                  | repeter | pour ]                      (l'instruction vide est permise)
-    affectation = id ":=" expression
-    lecture     = "LIRE" "(" id { "," id } ")"
-    ecriture    = "ECRIRE" "(" [ arg { "," arg } ] ")"
-    arg         = chaine | expression
-    si          = "SI" expression "ALORS" instruction [ "SINON" instruction ]
-    tantque     = "TANTQUE" expression "FAIRE" instruction
-    repeter     = "REPETER" liste "JUSQUA" expression
-    pour        = "POUR" id ":=" expression "JUSQUA" expression "FAIRE" instruction
-
-    expression  = conjonction { "OU" conjonction }
-    conjonction = negation { "ET" negation }
-    negation    = "NON" negation | comparaison
-    comparaison = somme [ ("=" | "<>" | "<" | "<=" | ">" | ">=") somme ]
-    somme       = produit { ("+" | "-") produit }
-    produit     = facteur { ("*" | "/" | "MOD") facteur }
-    facteur     = nombre | id | "(" expression ")" | "-" facteur | "+" facteur
-
-Le P-code est produit en même temps que l'analyse (traduction dirigée par la
-syntaxe). Les sauts en avant sont complétés après coup (« backpatching »).
+Chaque règle de la grammaire (voir le README) est une méthode. Pour les sauts vers
+l'avant (SI, TANTQUE, POUR) on émet l'instruction sans destination et on la complète
+une fois qu'on connaît l'adresse.
 """
-
-from __future__ import annotations
 
 from .analyseur_lexical import AnalyseurLexical, Token
 from .erreurs import ErreurSemantique, ErreurSyntaxique
 from .pcode import Instruction, Programme
-from .table_symboles import Nature, Symbole, TableSymboles, Type
+from .table_symboles import NATURE_CONST, NATURE_VAR, TYPE_CH, TYPE_ENT, Symbole, TableSymboles
+
+# ===== CONSTANTES =====
 
 ATTENDUS = {
-    "ptvirg": "';'", "pt": "'.'", "eg": "'='", "aff": "':='",
-    "parouv": "'('", "parfer": "')'", "virg": "','",
-    "id": "un identificateur", "ent": "un nombre",
+    "ptvirg": "';'", "pt": "'.'", "eg": "'='", "aff": "':='", "parouv": "'('",
+    "parfer": "')'", "virg": "','", "id": "un identificateur",
 }
 
-RELATIONS = {
-    "eg": "EGAL", "diff": "DIFF", "inf": "INF",
-    "infeg": "INFE", "sup": "SUP", "supeg": "SUPE",
-}
+OP_REL = {"eg": "EGAL", "diff": "DIFF", "inf": "INF", "infeg": "INFE", "sup": "SUP", "supeg": "SUPE"}
+OP_ADD = {"plus": "ADDI", "moins": "SOUS"}
+OP_MUL = {"mult": "MULT", "divi": "DIVI"}
 
-# Une instruction vide est reconnue quand on tombe sur l'un de ces symboles.
-FIN_D_INSTRUCTION_VIDE = {"FIN", "SINON", "JUSQUA"}
+# mots sur lesquels une instruction vide s'arrête (ex : "x := 1; FIN")
+FIN_INSTRUCTION = {"FIN", "SINON", "JUSQUA"}
 
 
 class AnalyseurSyntaxique:
-    def __init__(self, source: str) -> None:
-        self.lexer = AnalyseurLexical(source)
-        self.table = TableSymboles()
-        self.code: list[Instruction] = []
-        self.token: Token = self.lexer.suivant()
-        self.ligne_precedente = self.token.ligne
-        self._nb_boucles_pour = 0
 
-    # ===== outils =====
+    def __init__(self, source: str) -> None:
+        self.lex = AnalyseurLexical(source)
+        self.table = TableSymboles()
+        self.p_code: list[Instruction] = []
+        self.token = self.lex.analex()
+        self.ligne_prec = self.token.ligne   # ligne du dernier token consommé
+        self.nb_pour = 0
+
+    # ===== OUTILS =====
 
     def avancer(self) -> Token:
-        courant = self.token
-        self.ligne_precedente = courant.ligne
-        self.token = self.lexer.suivant()
-        return courant
+        t = self.token
+        self.ligne_prec = t.ligne
+        self.token = self.lex.analex()
+        return t
 
-    def erreur(self, message: str, token: Token | None = None):
-        t = token or self.token
-        raise ErreurSyntaxique(message, t.ligne, t.colonne)
+    def erreur(self, message: str, t: Token | None = None, classe=ErreurSyntaxique):
+        t = t or self.token
+        raise classe(message, t.ligne, t.colonne, len(t.texte))
 
     def erreur_attendu(self, attendu: str):
-        self.erreur(f"attendu : {attendu} ; trouvé : {self.token.description()}")
+        self.erreur(f"attendu {attendu}, trouvé {self.token.description()}")
 
     def attendre(self, type_: str) -> Token:
         if self.token.type != type_:
             self.erreur_attendu(ATTENDUS.get(type_, type_))
         return self.avancer()
 
-    def attendre_mot(self, mot: str) -> Token:
+    def attendre_mot(self, mot: str, attendu: str | None = None) -> Token:
         if not self.token.est(mot):
-            self.erreur_attendu(f"'{mot}'")
+            self.erreur_attendu(attendu or f"'{mot}'")
         return self.avancer()
 
-    def emettre(self, op: str, arg: int | str | None = None, ligne: int | None = None) -> int:
-        self.code.append(Instruction(op, arg, self.ligne_precedente if ligne is None else ligne))
-        return len(self.code) - 1
+    def emettre(self, op: str, arg=None, ligne: int | None = None) -> int:
+        self.p_code.append(Instruction(op, arg, self.ligne_prec if ligne is None else ligne))
+        return len(self.p_code) - 1
 
-    def patcher(self, index: int, cible: int) -> None:
-        ancienne = self.code[index]
-        self.code[index] = Instruction(ancienne.op, cible, ancienne.ligne)
+    def completer(self, adr: int, cible: int) -> None:
+        """Complète le saut émis à l'adresse adr maintenant qu'on connaît sa destination."""
+        instr = self.p_code[adr]
+        self.p_code[adr] = Instruction(instr.op, cible, instr.ligne)
 
-    def ici(self) -> int:
-        """Adresse de la prochaine instruction à émettre."""
-        return len(self.code)
+    def co(self) -> int:
+        """Adresse de la prochaine instruction."""
+        return len(self.p_code)
 
-    def symbole(self, token: Token) -> Symbole:
-        symbole = self.table.chercher(token.texte)
-        if symbole is None:
-            raise ErreurSemantique(
-                f"l'identificateur '{token.texte}' n'est pas déclaré", token.ligne, token.colonne
-            )
-        return symbole
+    def symbole(self, t: Token) -> Symbole:
+        s = self.table.search_id(t.texte)
+        if s is None:
+            self.erreur(f"'{t.texte}' n'est pas déclaré", t, ErreurSemantique)
+        return s
 
-    def variable(self, token: Token) -> Symbole:
-        """Symbole d'une variable (en écriture : refuse constantes et chaînes)."""
-        symbole = self.symbole(token)
-        if symbole.nature is Nature.CONSTANTE:
-            raise ErreurSemantique(
-                f"'{token.texte}' est une constante, on ne peut pas la modifier",
-                token.ligne, token.colonne,
-            )
-        return symbole
+    def variable(self, t: Token) -> Symbole:
+        """Identificateur dans lequel on va écrire : doit être une variable."""
+        s = self.symbole(t)
+        if s.nature == NATURE_CONST:
+            self.erreur(f"'{t.texte}' est une constante, on ne peut pas la modifier", t,
+                        ErreurSemantique)
+        return s
 
-    # ===== point d'entrée =====
+    # ===== PROGRAMME ET DÉCLARATIONS =====
 
-    def compiler(self) -> Programme:
-        self.programme()
-        return Programme(self.code, list(self.table.noms), list(self.table.initiales))
+    def anasynt(self) -> Programme:
+        self.prog()
+        return Programme(self.p_code, self.table.noms_memoire, self.table.valeurs_initiales)
 
-    # ===== déclarations =====
-
-    def programme(self) -> None:
+    def prog(self) -> None:
         self.attendre_mot("PROGRAMME")
         self.attendre("id")
         self.attendre("ptvirg")
@@ -135,7 +104,7 @@ class AnalyseurSyntaxique:
         self.bloc()
         self.attendre("pt")
         if self.token.type != "EOF":
-            self.erreur("du texte suit le '.' final du programme")
+            self.erreur("rien ne doit suivre le '.' final")
         self.emettre("STOP")
 
     def decl_const(self) -> None:
@@ -144,18 +113,16 @@ class AnalyseurSyntaxique:
             nom = self.attendre("id")
             self.attendre("eg")
             if self.token.type == "ch":
-                valeur = self.avancer()
-                self.table.ajouter(nom.texte, Nature.CONSTANTE, Type.CH, valeur.valeur,
-                                   nom.ligne, nom.colonne)
+                self.table.add_id(nom.texte, NATURE_CONST, TYPE_CH, self.avancer().valeur,
+                                  nom.ligne, nom.colonne)
             else:
-                signe = 1
+                signe = -1 if self.token.type == "moins" else 1
                 if self.token.type in ("plus", "moins"):
-                    signe = -1 if self.avancer().type == "moins" else 1
+                    self.avancer()
                 if self.token.type != "ent":
                     self.erreur_attendu("un nombre ou une chaîne")
-                valeur = self.avancer()
-                self.table.ajouter(nom.texte, Nature.CONSTANTE, Type.ENT, signe * valeur.valeur,
-                                   nom.ligne, nom.colonne)
+                self.table.add_id(nom.texte, NATURE_CONST, TYPE_ENT, signe * self.avancer().valeur,
+                                  nom.ligne, nom.colonne)
             if self.token.type != "virg":
                 break
             self.avancer()
@@ -165,22 +132,20 @@ class AnalyseurSyntaxique:
         self.avancer()
         while True:
             nom = self.attendre("id")
-            self.table.ajouter(nom.texte, Nature.VARIABLE, Type.ENT, None, nom.ligne, nom.colonne)
+            self.table.add_id(nom.texte, NATURE_VAR, TYPE_ENT, None, nom.ligne, nom.colonne)
             if self.token.type != "virg":
                 break
             self.avancer()
         self.attendre("ptvirg")
 
-    # ===== instructions =====
+    # ===== INSTRUCTIONS =====
 
     def bloc(self) -> None:
         self.attendre_mot("DEBUT")
-        self.liste_instructions()
-        if not self.token.est("FIN"):
-            self.erreur_attendu("';' ou 'FIN'")
-        self.avancer()
+        self.suite_instructions()
+        self.attendre_mot("FIN", "';' ou 'FIN'")
 
-    def liste_instructions(self) -> None:
+    def suite_instructions(self) -> None:
         self.instruction()
         while self.token.type == "ptvirg":
             self.avancer()
@@ -189,32 +154,25 @@ class AnalyseurSyntaxique:
     def instruction(self) -> None:
         t = self.token
         if t.type == "id":
-            self.affectation()
-        elif t.type == "ptvirg":
-            return
-        elif t.type == "mot_res":
-            if t.texte in FIN_D_INSTRUCTION_VIDE:
-                return
-            instructions = {
-                "LIRE": self.lecture, "ECRIRE": self.ecriture, "DEBUT": self.bloc,
-                "SI": self.si, "TANTQUE": self.tantque,
-                "REPETER": self.repeter, "POUR": self.pour,
-            }
-            if t.texte not in instructions:
-                self.erreur_attendu("une instruction")
-            instructions[t.texte]()
-        else:
-            self.erreur_attendu("une instruction")
+            return self.affectation()
+        if t.type == "ptvirg" or (t.type == "mot_res" and t.texte in FIN_INSTRUCTION):
+            return   # instruction vide
+        match t.texte if t.type == "mot_res" else None:
+            case "LIRE": self.lecture()
+            case "ECRIRE": self.ecriture()
+            case "DEBUT": self.bloc()
+            case "SI": self.inst_cond()
+            case "TANTQUE": self.inst_repe()
+            case "REPETER": self.inst_repeter()
+            case "POUR": self.inst_pour()
+            case _: self.erreur_attendu("une instruction")
 
     def affectation(self) -> None:
         nom = self.avancer()
-        symbole = self.variable(nom)
-        if symbole.type is not Type.ENT:
-            raise ErreurSemantique(f"'{nom.texte}' n'est pas une variable entière",
-                                   nom.ligne, nom.colonne)
+        s = self.variable(nom)
         self.attendre("aff")
-        self.emettre("EMPI", symbole.adresse, nom.ligne)
-        self.expression()
+        self.emettre("EMPI", s.adrv, nom.ligne)
+        self.exp()
         self.emettre("AFFE", ligne=nom.ligne)
 
     def lecture(self) -> None:
@@ -222,8 +180,7 @@ class AnalyseurSyntaxique:
         self.attendre("parouv")
         while True:
             nom = self.attendre("id")
-            symbole = self.variable(nom)
-            self.emettre("EMPI", symbole.adresse, nom.ligne)
+            self.emettre("EMPI", self.variable(nom).adrv, nom.ligne)
             self.emettre("LIRE", ligne=nom.ligne)
             if self.token.type != "virg":
                 break
@@ -234,152 +191,142 @@ class AnalyseurSyntaxique:
         mot = self.avancer()
         self.attendre("parouv")
         if self.token.type == "parfer":
-            self.emettre("ECRL", ligne=mot.ligne)
+            self.emettre("ECRL", ligne=mot.ligne)   # ECRIRE() : retour à la ligne
         else:
-            while True:
-                self.argument_ecriture()
-                if self.token.type != "virg":
-                    break
+            self.ecr_exp()
+            while self.token.type == "virg":
                 self.avancer()
+                self.ecr_exp()
         self.attendre("parfer")
 
-    def argument_ecriture(self) -> None:
+    def ecr_exp(self) -> None:
+        # une chaîne (littérale ou constante) est écrite telle quelle, le reste est calculé
         t = self.token
         chaine = None
         if t.type == "ch":
             chaine = t.valeur
-        elif t.type == "id":
-            symbole = self.symbole(t)
-            if symbole.type is Type.CH:
-                chaine = symbole.valeur
+        elif t.type == "id" and (s := self.symbole(t)).type == TYPE_CH:
+            chaine = s.valeur
         if chaine is None:
-            self.expression()
+            self.exp()
             self.emettre("ECRE")
             return
         self.avancer()
         if self.token.type not in ("virg", "parfer"):
-            raise ErreurSemantique(
-                "une chaîne ne peut pas servir dans un calcul (seulement dans ECRIRE)",
-                t.ligne, t.colonne,
-            )
+            self.erreur("une chaîne ne peut pas entrer dans un calcul", t, ErreurSemantique)
         self.emettre("ECRC", chaine, t.ligne)
 
-    def si(self) -> None:
+    def inst_cond(self) -> None:
+        # SI exp ALORS inst [SINON inst]
         self.avancer()
-        self.expression()
+        self.exp()
         self.attendre_mot("ALORS")
-        saut_faux = self.emettre("ALSN")
+        saut_sinon = self.emettre("ALSN")
         self.instruction()
         if self.token.est("SINON"):
             saut_fin = self.emettre("ALLE")
-            self.patcher(saut_faux, self.ici())
+            self.completer(saut_sinon, self.co())
             self.avancer()
             self.instruction()
-            self.patcher(saut_fin, self.ici())
+            self.completer(saut_fin, self.co())
         else:
-            self.patcher(saut_faux, self.ici())
+            self.completer(saut_sinon, self.co())
 
-    def tantque(self) -> None:
+    def inst_repe(self) -> None:
+        # TANTQUE exp FAIRE inst
         self.avancer()
-        debut = self.ici()
-        self.expression()
+        debut = self.co()
+        self.exp()
         self.attendre_mot("FAIRE")
         sortie = self.emettre("ALSN")
         self.instruction()
         self.emettre("ALLE", debut)
-        self.patcher(sortie, self.ici())
+        self.completer(sortie, self.co())
 
-    def repeter(self) -> None:
+    def inst_repeter(self) -> None:
+        # REPETER inst {; inst} JUSQUA exp
         self.avancer()
-        debut = self.ici()
-        self.liste_instructions()
-        if not self.token.est("JUSQUA"):
-            self.erreur_attendu("';' ou 'JUSQUA'")
-        self.avancer()
-        self.expression()
+        debut = self.co()
+        self.suite_instructions()
+        self.attendre_mot("JUSQUA", "';' ou 'JUSQUA'")
+        self.exp()
         self.emettre("ALSN", debut)
 
-    def pour(self) -> None:
+    def inst_pour(self) -> None:
+        # POUR i := exp JUSQUA exp FAIRE inst
         mot = self.avancer()
         nom = self.attendre("id")
-        compteur = self.variable(nom)
-        if compteur.type is not Type.ENT:
-            raise ErreurSemantique(f"'{nom.texte}' n'est pas une variable entière",
-                                   nom.ligne, nom.colonne)
+        i = self.variable(nom).adrv
         self.attendre("aff")
-        # La borne est évaluée une seule fois, dans un mot mémoire caché.
-        self._nb_boucles_pour += 1
-        limite = self.table.reserver(f"$limite{self._nb_boucles_pour}")
-        self.emettre("EMPI", compteur.adresse, nom.ligne)
-        self.expression()
-        self.emettre("AFFE", ligne=nom.ligne)
+        # la borne est calculée une seule fois et rangée dans un mot caché
+        self.nb_pour += 1
+        borne = self.table.reserver_mot(f"$borne{self.nb_pour}")
+        ligne = mot.ligne
+
+        self.emettre("EMPI", i, ligne)
+        self.exp()
+        self.emettre("AFFE", ligne=ligne)
         self.attendre_mot("JUSQUA")
-        self.emettre("EMPI", limite, mot.ligne)
-        self.expression()
-        self.emettre("AFFE", ligne=mot.ligne)
+        self.emettre("EMPI", borne, ligne)
+        self.exp()
+        self.emettre("AFFE", ligne=ligne)
         self.attendre_mot("FAIRE")
-        debut = self.ici()
-        self.emettre("EMPI", compteur.adresse, mot.ligne)
-        self.emettre("CONT", ligne=mot.ligne)
-        self.emettre("EMPI", limite, mot.ligne)
-        self.emettre("CONT", ligne=mot.ligne)
-        self.emettre("INFE", ligne=mot.ligne)
-        sortie = self.emettre("ALSN", ligne=mot.ligne)
+
+        debut = self.co()   # tant que i <= borne
+        for op, arg in [("EMPI", i), ("CONT", None), ("EMPI", borne), ("CONT", None), ("INFE", None)]:
+            self.emettre(op, arg, ligne)
+        sortie = self.emettre("ALSN", ligne=ligne)
         self.instruction()
-        self.emettre("EMPI", compteur.adresse, mot.ligne)
-        self.emettre("EMPI", compteur.adresse, mot.ligne)
-        self.emettre("CONT", ligne=mot.ligne)
-        self.emettre("EMPI", 1, mot.ligne)
-        self.emettre("ADDI", ligne=mot.ligne)
-        self.emettre("AFFE", ligne=mot.ligne)
-        self.emettre("ALLE", debut, mot.ligne)
-        self.patcher(sortie, self.ici())
+        for op, arg in [("EMPI", i), ("EMPI", i), ("CONT", None), ("EMPI", 1), ("ADDI", None),
+                        ("AFFE", None), ("ALLE", debut)]:   # i := i + 1 puis on reboucle
+            self.emettre(op, arg, ligne)
+        self.completer(sortie, self.co())
 
-    # ===== expressions (une fonction par niveau de priorité) =====
+    # ===== EXPRESSIONS : une méthode par niveau de priorité, du plus faible au plus fort =====
 
-    def expression(self) -> None:
-        self.conjonction()
+    def exp(self) -> None:
+        self.exp_et()
         while self.token.est("OU"):
             op = self.avancer()
-            self.conjonction()
+            self.exp_et()
             self.emettre("OU", ligne=op.ligne)
 
-    def conjonction(self) -> None:
-        self.negation()
+    def exp_et(self) -> None:
+        self.exp_non()
         while self.token.est("ET"):
             op = self.avancer()
-            self.negation()
+            self.exp_non()
             self.emettre("ET", ligne=op.ligne)
 
-    def negation(self) -> None:
+    def exp_non(self) -> None:
         if self.token.est("NON"):
             op = self.avancer()
-            self.negation()
+            self.exp_non()
             self.emettre("NON", ligne=op.ligne)
         else:
-            self.comparaison()
+            self.exp_rel()
 
-    def comparaison(self) -> None:
-        self.somme()
-        if self.token.type in RELATIONS:
+    def exp_rel(self) -> None:
+        self.exp_arith()
+        if self.token.type in OP_REL:
             op = self.avancer()
-            self.somme()
-            self.emettre(RELATIONS[op.type], ligne=op.ligne)
+            self.exp_arith()
+            self.emettre(OP_REL[op.type], ligne=op.ligne)
 
-    def somme(self) -> None:
-        self.produit()
-        while self.token.type in ("plus", "moins"):
+    def exp_arith(self) -> None:
+        # la boucle (et pas la récursion) donne l'associativité à gauche : a - b - c = (a - b) - c
+        self.terme()
+        while self.token.type in OP_ADD:
             op = self.avancer()
-            self.produit()
-            self.emettre("ADDI" if op.type == "plus" else "SOUS", ligne=op.ligne)
+            self.terme()
+            self.emettre(OP_ADD[op.type], ligne=op.ligne)
 
-    def produit(self) -> None:
+    def terme(self) -> None:
         self.facteur()
-        while self.token.type in ("mult", "divi") or self.token.est("MOD"):
+        while self.token.type in OP_MUL or self.token.est("MOD"):
             op = self.avancer()
             self.facteur()
-            nom = {"mult": "MULT", "divi": "DIVI"}.get(op.type, "MODU")
-            self.emettre(nom, ligne=op.ligne)
+            self.emettre(OP_MUL.get(op.type, "MODU"), ligne=op.ligne)
 
     def facteur(self) -> None:
         t = self.token
@@ -388,18 +335,16 @@ class AnalyseurSyntaxique:
                 self.avancer()
                 self.emettre("EMPI", t.valeur, t.ligne)
             case "id":
-                symbole = self.symbole(t)
-                if symbole.type is not Type.ENT:
-                    raise ErreurSemantique(
-                        f"la constante chaîne '{t.texte}' ne peut pas servir dans un calcul",
-                        t.ligne, t.colonne,
-                    )
+                s = self.symbole(t)
+                if s.type == TYPE_CH:
+                    self.erreur(f"'{t.texte}' est une chaîne, elle ne peut pas entrer dans un calcul",
+                                t, ErreurSemantique)
                 self.avancer()
-                self.emettre("EMPI", symbole.adresse, t.ligne)
+                self.emettre("EMPI", s.adrv, t.ligne)
                 self.emettre("CONT", ligne=t.ligne)
             case "parouv":
                 self.avancer()
-                self.expression()
+                self.exp()
                 self.attendre("parfer")
             case "moins":
                 self.avancer()
@@ -409,14 +354,14 @@ class AnalyseurSyntaxique:
                 self.avancer()
                 self.facteur()
             case "ch":
-                raise ErreurSemantique(
-                    "une chaîne ne peut pas servir dans un calcul (seulement dans ECRIRE)",
-                    t.ligne, t.colonne,
-                )
+                self.erreur("une chaîne ne peut pas entrer dans un calcul", t, ErreurSemantique)
             case _:
                 self.erreur_attendu("une expression")
 
 
 def compiler(source: str) -> Programme:
-    """Compile un programme MiniPascal (texte) en P-code."""
-    return AnalyseurSyntaxique(source).compiler()
+    source = source.removeprefix("﻿")   # BOM ajouté par certains éditeurs Windows
+    try:
+        return AnalyseurSyntaxique(source).anasynt()
+    except RecursionError:
+        raise ErreurSyntaxique("programme trop imbriqué (trop de parenthèses ou de blocs)") from None
