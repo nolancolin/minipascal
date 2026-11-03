@@ -1,0 +1,8 @@
+{ Compile, mais échoue à l'exécution }
+PROGRAMME erreur;
+VAR a, b;
+DEBUT
+  a := 10;
+  b := 0;
+  ECRIRE(a / b)
+FIN.

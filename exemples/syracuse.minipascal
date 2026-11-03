@@ -1,0 +1,14 @@
+{ Suite de Syracuse avec REPETER ... JUSQUA }
+PROGRAMME syracuse;
+VAR n, etapes;
+DEBUT
+  ECRIRE("Départ : ");
+  LIRE(n);
+  etapes := 0;
+  REPETER
+    SI n MOD 2 = 0 ALORS n := n / 2 SINON n := 3 * n + 1;
+    etapes := etapes + 1
+  JUSQUA n = 1;
+  ECRIRE("Arrivé à 1 en ", etapes, " étapes");
+  ECRIRE()
+FIN.

@@ -1,0 +1,15 @@
+{ Table de multiplication : deux POUR imbriqués }
+PROGRAMME table;
+CONST taille = 9;
+VAR i, j;
+DEBUT
+  POUR i := 1 JUSQUA taille FAIRE
+  DEBUT
+    POUR j := 1 JUSQUA taille FAIRE
+    DEBUT
+      SI i * j < 10 ALORS ECRIRE(" ");
+      ECRIRE(i * j, " ")
+    FIN;
+    ECRIRE()
+  FIN
+FIN.

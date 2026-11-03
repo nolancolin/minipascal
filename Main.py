@@ -1,10 +1,8 @@
-import AnalyseurLexical, AnalyseurSyntaxique, MachineVirtuelle
+"""Raccourci : ``python Main.py [programme.minipascal]`` (équivaut à ``python -m minipascal``)."""
 
-nom_fichier = "Code.minipascal"
+import sys
 
-AnalyseurLexical.initialiser(nom_fichier)
-if AnalyseurSyntaxique.anasynt():
-    MachineVirtuelle.creer_fichier_code(nom_fichier)
-    MachineVirtuelle.interpreterWithFile(nom_fichier)
-    # MachineVirtuelle.interpreter()
-AnalyseurLexical.fermer()
+from minipascal.cli import main
+
+if __name__ == "__main__":
+    sys.exit(main())

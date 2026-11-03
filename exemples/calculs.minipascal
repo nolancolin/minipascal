@@ -1,0 +1,13 @@
+{ Priorités des opérateurs, parenthèses, division entière et MOD }
+PROGRAMME calculs;
+CONST a = 10, b = 3;
+DEBUT
+  ECRIRE("2 + 3 * 4   = ", 2 + 3 * 4); ECRIRE();
+  ECRIRE("2 * 3 + 4   = ", 2 * 3 + 4); ECRIRE();
+  ECRIRE("10 - 3 - 2  = ", 10 - 3 - 2); ECRIRE();
+  ECRIRE("(2 + 3) * 4 = ", (2 + 3) * 4); ECRIRE();
+  ECRIRE("a / b       = ", a / b); ECRIRE();
+  ECRIRE("a MOD b     = ", a MOD b); ECRIRE();
+  ECRIRE("-a + b      = ", -a + b); ECRIRE();
+  ECRIRE("a > b ET b > 0 = ", a > b ET b > 0); ECRIRE()
+FIN.

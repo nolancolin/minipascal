@@ -1,0 +1,5 @@
+PROGRAMME erreur;
+CONST pi = 3;
+DEBUT
+  pi := 4
+FIN.

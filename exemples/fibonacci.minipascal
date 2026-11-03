@@ -1,0 +1,19 @@
+{ Les n premiers termes de la suite de Fibonacci avec TANTQUE }
+PROGRAMME fibonacci;
+VAR n, a, b, t, k;
+DEBUT
+  ECRIRE("Combien de termes ? ");
+  LIRE(n);
+  a := 0;
+  b := 1;
+  k := 0;
+  TANTQUE k < n FAIRE
+  DEBUT
+    ECRIRE(a, " ");
+    t := a + b;
+    a := b;
+    b := t;
+    k := k + 1
+  FIN;
+  ECRIRE()
+FIN.

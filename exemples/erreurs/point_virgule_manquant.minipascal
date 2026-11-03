@@ -1,0 +1,6 @@
+PROGRAMME erreur;
+VAR x;
+DEBUT
+  x := 1
+  ECRIRE(x)
+FIN.

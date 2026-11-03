@@ -1,0 +1,15 @@
+{ PGCD par l'algorithme d'Euclide }
+PROGRAMME pgcd;
+VAR a, b, r;
+DEBUT
+  ECRIRE("a = "); LIRE(a);
+  ECRIRE("b = "); LIRE(b);
+  TANTQUE b <> 0 FAIRE
+  DEBUT
+    r := a MOD b;
+    a := b;
+    b := r
+  FIN;
+  ECRIRE("PGCD = ", a);
+  ECRIRE()
+FIN.

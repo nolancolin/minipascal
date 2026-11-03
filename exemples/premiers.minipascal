@@ -1,0 +1,18 @@
+{ Nombres premiers jusqu'à n : POUR, TANTQUE imbriqués, SI/SINON, ET }
+PROGRAMME premiers;
+VAR n, i, d, premier;
+DEBUT
+  ECRIRE("Premiers jusqu'a : ");
+  LIRE(n);
+  POUR i := 2 JUSQUA n FAIRE
+  DEBUT
+    premier := 1;
+    d := 2;
+    TANTQUE d * d <= i ET premier FAIRE
+    DEBUT
+      SI i MOD d = 0 ALORS premier := 0 SINON d := d + 1
+    FIN;
+    SI premier ALORS ECRIRE(i, " ")
+  FIN;
+  ECRIRE()
+FIN.

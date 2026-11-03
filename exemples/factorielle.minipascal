@@ -1,0 +1,12 @@
+{ Factorielle avec POUR }
+PROGRAMME factorielle;
+VAR n, i, f;
+DEBUT
+  ECRIRE("n = ");
+  LIRE(n);
+  f := 1;
+  POUR i := 2 JUSQUA n FAIRE
+    f := f * i;
+  ECRIRE(n, "! = ", f);
+  ECRIRE()
+FIN.

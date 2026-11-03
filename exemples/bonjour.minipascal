@@ -1,0 +1,7 @@
+{ Premier programme : constantes chaînes et ECRIRE }
+PROGRAMME bonjour;
+CONST message = "Bonjour le monde !";
+DEBUT
+  ECRIRE(message);
+  ECRIRE()
+FIN.
