@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "minipascal"
+version = "2.0.0"
+description = "Compilateur MiniPascal vers P-code et machine virtuelle à pile"
+readme = "README.md"
+requires-python = ">=3.10"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Topic :: Software Development :: Compilers",
+    "Natural Language :: French",
+]
+
+[project.scripts]
+minipascal = "minipascal.cli:main"
+
+[tool.setuptools]
+packages = ["minipascal"]
